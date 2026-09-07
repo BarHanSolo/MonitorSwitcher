@@ -1,34 +1,90 @@
 # Monitor Switcher
 
-A small Windows tray application for switching monitor input sources using DDC/CI.
+**Switch monitor inputs on Windows without touching the monitor buttons.**
 
-It allows you to:
+Monitor Switcher is a small, portable Windows tray application that uses **DDC/CI** to read and change monitor input sources.
 
-- switch all configured monitors to a named profile,
-- switch individual monitors between their configured profiles,
-- cycle through all profiles configured for a monitor,
-- detect monitors using their Windows hardware ID,
-- verify that the requested input source was actually applied,
-- retry slow or temporarily unresponsive monitors for up to 5 seconds.
+It is useful for setups with:
 
-The application runs in the Windows system tray.
+* multiple monitors,
+* multiple computers,
+* monitors shared between computers,
+* KVM-like setups where switching the mouse and keyboard is not enough,
+* workstations with many displays,
+* control rooms and other multi-display environments.
+
+Instead of manually switching each monitor's input, you can define profiles such as:
+
+```text
+Work
+Home
+Computer 1
+Computer 2
+```
+
+and switch the inputs of all configured monitors with a single click.
+
+## Portable — no installation required
+
+Monitor Switcher is distributed as a self-contained Windows executable.
+
+Copy these two files to a computer:
+
+```text
+MonitorSwitcher.exe
+monitors.json
+```
+
+and run the executable.
+
+There is no installer, Windows service, driver, or .NET Runtime installation required.
+
+The application does not require administrator privileges under normal Windows security policies.
+
+> Corporate security policies such as AppLocker or application-control software may still prevent an executable from running.
+
+## Multiple computers
+
+Monitor Switcher can be used independently on multiple computers.
+
+For example:
+
+```text
+Computer 1
+├── MonitorSwitcher.exe
+└── monitors.json
+
+Computer 2
+├── MonitorSwitcher.exe
+└── monitors.json
+```
+
+Each computer controls the monitors that are physically connected to it and exposed through Windows/DDC/CI.
+
+The same executable can be copied to both machines.
+
+Each machine can use the same configuration or its own `monitors.json`, depending on the monitor setup.
 
 ## How it works
 
-Monitor Switcher uses DDC/CI VCP command `0x60` to read and change the monitor input source.
+Monitor Switcher uses the **DDC/CI VCP `0x60` input source command** to read and change monitor inputs.
 
-Each monitor is identified by its hardware ID, for example:
+For example, a monitor might report:
 
 ```text
-ACR06E5
-AOCB327
+VCP 0x60 = 17 → DisplayPort
+VCP 0x60 = 18 → HDMI
 ```
 
-The input source values are configured manually in `monitors.json`.
+The exact values depend on the monitor.
+
+The application identifies monitors using their Windows hardware IDs and maps those IDs to configured input values.
 
 ## Configuration
 
 Create a file named `monitors.json` next to `MonitorSwitcher.exe`.
+
+An example configuration is provided in `monitors.example.json`.
 
 Example:
 
@@ -55,59 +111,24 @@ Example:
 }
 ```
 
-### Monitor ID
+## Profiles
 
-The `id` field should contain the monitor hardware ID reported by Windows.
-
-For example:
-
-```text
-ACR06E5
-AOCB327
-```
-
-The application matches this ID against the monitor information returned by Windows.
-
-### Input source values
-
-The values in `profiles` are DDC/CI VCP `0x60` values.
+Clicking a profile switches all configured monitors to that profile.
 
 For example:
-
-```json
-"profiles": {
-  "Work": 17,
-  "Home": 15
-}
-```
-
-The actual values depend on the monitor and its inputs.
-
-You can use a tool such as ControlMyMonitor to find the VCP `0x60` value for each input.
-
-## Tray menu
-
-The tray menu contains three sections:
 
 ```text
 Work
 Home
-----------------
-Left
-Right
-----------------
-Exit
 ```
 
-### Profiles
+can switch an entire multi-monitor workstation from one computer to another.
 
-Clicking a profile switches all configured monitors to that profile.
+Monitors that are already using the requested input are skipped.
 
-A monitor that is already using the requested input is skipped.
+## Individual monitor switching
 
-### Individual monitors
-
-Clicking a monitor cycles it to the next configured profile.
+Clicking an individual monitor in the tray menu cycles through all profiles configured for that monitor.
 
 For example:
 
@@ -115,50 +136,42 @@ For example:
 Work → Home → Work
 ```
 
-If a monitor has more profiles, all of them are included in the cycle.
-
 ## Slow monitors
 
-Some monitors can take several seconds to switch inputs or respond to DDC/CI commands.
+Some monitors are surprisingly slow when responding to DDC/CI commands.
 
-Monitor Switcher therefore retries DDC/CI operations for up to 5 seconds and verifies the resulting VCP `0x60` value after switching.
+Monitor Switcher retries operations for up to 5 seconds and verifies the resulting VCP `0x60` value after switching.
 
-This is intentional.
+This is intentional and helps with monitors that take several seconds to change inputs.
 
 ## Requirements
 
-- Windows
-- A monitor with DDC/CI support
-- DDC/CI enabled in the monitor's OSD/settings
-- .NET 9 SDK for building the application
-
-The published self-contained executable does not require the .NET runtime to be installed.
+* Windows
+* Monitor with DDC/CI support
+* DDC/CI enabled on the monitor
+* A monitor input that can be controlled through VCP `0x60`
 
 ## Building
 
-Clone the repository and run:
+Requires the .NET 9 SDK.
+
+Build:
 
 ```powershell
 dotnet build
 ```
 
-To create a self-contained single-file executable:
+Publish a self-contained Windows x64 executable:
 
 ```powershell
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-The executable will be created under:
-
-```text
-bin\Release\net9.0-windows\win-x64\publish\
-```
-
-Copy `MonitorSwitcher.exe` and your `monitors.json` to the same directory.
+The published executable does not require the .NET Runtime to be installed.
 
 ## Starting with Windows
 
-To start Monitor Switcher automatically with Windows:
+To start Monitor Switcher automatically:
 
 1. Press `Win + R`.
 2. Enter:
@@ -169,7 +182,7 @@ shell:startup
 
 3. Create a shortcut to `MonitorSwitcher.exe`.
 
-The application will start minimized to the system tray.
+The application starts directly in the system tray.
 
 ## Troubleshooting
 
@@ -177,25 +190,21 @@ The application will start minimized to the system tray.
 
 Check that the configured `id` matches the monitor hardware ID reported by Windows.
 
-If the application cannot find a configured monitor, it displays diagnostic information containing the detected device IDs.
+Monitor Switcher displays diagnostic information when a configured monitor cannot be found.
 
 ### Input switching does not work
 
-Check:
+Check that:
 
-- DDC/CI is enabled on the monitor.
-- The monitor supports changing inputs through DDC/CI.
-- VCP `0x60` contains the expected values.
-- The configured values in `monitors.json` are correct.
+* DDC/CI is enabled,
+* the monitor supports input switching through DDC/CI,
+* VCP `0x60` reports the expected values,
+* the values in `monitors.json` are correct.
 
-Some monitors may take several seconds to respond after an input change.
+Some monitors may take several seconds to respond.
 
 ### The monitor switches but the application reports an error
 
-The monitor may be responding too slowly for DDC/CI.
+The monitor may be responding slowly to DDC/CI.
 
-Monitor Switcher retries operations for up to 5 seconds and verifies the resulting value. If the monitor takes longer than that, increase the retry timeout in `Program.cs`.
-
-## License
-
-This project is provided as-is for personal and hobby use.
+Monitor Switcher retries operations for up to 5 seconds and verifies the resulting input value.
