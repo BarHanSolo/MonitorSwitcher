@@ -1,0 +1,20 @@
+{
+  "monitors": [
+    {
+      "name": "Left",
+      "id": "MONITOR_ID_1",
+      "profiles": {
+        "Work": 18,
+        "Home": 17
+      }
+    },
+    {
+      "name": "Right",
+      "id": "MONITOR_ID_2",
+      "profiles": {
+        "Work": 17,
+        "Home": 15
+      }
+    }
+  ]
+}
