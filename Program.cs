@@ -37,13 +37,10 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         var menu = BuildMenu();
 
-        string iconPath = Path.Combine(
-            AppContext.BaseDirectory,
-            "monitor.ico");
-
-        Icon trayIcon = File.Exists(iconPath)
-            ? new Icon(iconPath)
-            : SystemIcons.Application;
+        Icon trayIcon =
+            Icon.ExtractAssociatedIcon(
+                Application.ExecutablePath)
+            ?? SystemIcons.Application;
 
         _trayIcon = new NotifyIcon
         {
